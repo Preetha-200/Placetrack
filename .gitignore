@@ -1,0 +1,84 @@
+# Node & Package Managers
+node_modules
+**/node_modules
+.npm
+
+# Output & Build Artifacts
+.output
+.vercel
+**/.vercel
+.netlify
+.wrangler
+/.svelte-kit
+**/.svelte-kit
+/build
+**/build
+dist
+**/dist
+
+# Python & ML Caches
+__pycache__
+**/__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment Configuration & Secrets
+.env
+.env.*
+*.env
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+!.env.test
+!**/.env.test
+
+# Credentials & Service Accounts
+*.pem
+*.key
+*serviceAccount*.json
+*credentials*.json
+firebase-admin-key*.json
+
+# Archives & Exports
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Vite & Tooling
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Firebase Emulator
+.emulator-data
+**/.emulator-data

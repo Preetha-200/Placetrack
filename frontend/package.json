@@ -1,0 +1,37 @@
+{
+	"name": "placement",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"prepare": "svelte-kit sync || echo ''",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"db:migrate": "node ../scripts/migrate-pg-to-firestore.mjs",
+		"db:migrate:pg": "node ../scripts/migrate.js",
+		"seed": "tsx ../scripts/seed-firestore.js",
+		"emulators": "node ../scripts/start-emulators.js"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/kit": "^2.63.0",
+		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/node": "^26.6.2",
+		"firebase-tools": "^15.32.1",
+		"svelte": "^5.56.1",
+		"svelte-check": "^4.6.0",
+		"tsx": "^4.23.15",
+		"typescript": "^6.0.3",
+		"vite": "^8.0.16"
+	},
+	"dependencies": {
+		"@google/genai": "^2.28.0",
+		"@lucide/svelte": "^1.52.0",
+		"firebase": "^12.19.0",
+		"firebase-admin": "^14.5.0",
+		"postgres": "^3.4.9"
+	}
+}

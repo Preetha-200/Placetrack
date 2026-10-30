@@ -1,0 +1,64 @@
+{
+  "best_algorithm": "Logistic Regression",
+  "model_version": "placetrack-rf-v1.0",
+  "training_dataset": {
+    "total_samples": 2500,
+    "train_samples": 2000,
+    "test_samples": 500,
+    "test_split_ratio": 0.2
+  },
+  "models_comparison": {
+    "Logistic Regression": {
+      "accuracy": 89.6,
+      "precision_macro": 89.36,
+      "recall_macro": 89.44,
+      "f1_score_macro": 89.38,
+      "f1_score_weighted": 89.55
+    },
+    "Decision Tree": {
+      "accuracy": 82.0,
+      "precision_macro": 83.05,
+      "recall_macro": 81.02,
+      "f1_score_macro": 81.78,
+      "f1_score_weighted": 82.0
+    },
+    "Random Forest": {
+      "accuracy": 88.2,
+      "precision_macro": 88.47,
+      "recall_macro": 87.9,
+      "f1_score_macro": 88.16,
+      "f1_score_weighted": 88.21
+    }
+  },
+  "best_model_performance": {
+    "accuracy": 89.6,
+    "precision": 89.36,
+    "recall": 89.44,
+    "f1_score": 89.38,
+    "regressor_mae": 2.52,
+    "regressor_r2": 0.9399
+  },
+  "feature_importances": {
+    "historical_performance": 27.5,
+    "technical_score": 20.64,
+    "aptitude_score": 16.09,
+    "logical_score": 14.13,
+    "verbal_score": 9.19,
+    "mock_interview_score": 6.9,
+    "completion_rate": 5.56
+  },
+  "feature_names": [
+    "aptitude_score",
+    "verbal_score",
+    "logical_score",
+    "technical_score",
+    "completion_rate",
+    "mock_interview_score",
+    "historical_performance"
+  ],
+  "classes": [
+    "Needs Improvement",
+    "Moderate",
+    "High"
+  ]
+}

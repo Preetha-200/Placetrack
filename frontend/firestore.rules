@@ -1,0 +1,263 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================
+    // Core Helper Functions
+    // =========================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function getUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && (
+        request.auth.token.role == role ||
+        getUserDoc().role == role
+      );
+    }
+
+    function isStudent() {
+      return hasRole('STUDENT');
+    }
+
+    function isTrainer() {
+      return hasRole('TRAINER');
+    }
+
+    function isCoordinator() {
+      return hasRole('PLACEMENT_COORDINATOR');
+    }
+
+    // =========================================================
+    // 1. Users Collection
+    // =========================================================
+    match /users/{userId} {
+      // Users can read their own profile; Trainers & Coordinators can read directory info
+      allow read: if isOwner(userId) || isTrainer() || isCoordinator();
+      // Users can update their own profile EXCEPT role; Coordinator can manage all
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isCoordinator();
+      allow create, delete: if isCoordinator();
+    }
+
+    // =========================================================
+    // 2. Students Collection
+    // =========================================================
+    match /students/{studentId} {
+      // Only the student themselves, trainers, or coordinators can view the profile
+      allow read: if isOwner(studentId) || isTrainer() || isCoordinator();
+      
+      // Coordinator has full management permissions
+      allow create, delete: if isCoordinator();
+
+      // Student can update only allowed non-sensitive fields; Trainers can update trainerNotes; Coordinator has full access
+      allow update: if isCoordinator() ||
+        (isTrainer() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trainerNotes', 'trainerId', 'updatedAt'])) ||
+        (isOwner(studentId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'role', 'cgpa', 'placementStatus', 'readinessScore', 'readinessStatus',
+          'aptitudeScore', 'verbalScore', 'logicalScore', 'technicalScore',
+          'department', 'course', 'year', 'batch', 'registerNumber', 'testsCompleted'
+        ]));
+    }
+
+    // =========================================================
+    // 3. Assessments & Questions
+    // =========================================================
+    match /assessments/{assessmentId} {
+      // Students can view published assessments; Trainers/Coordinators can view all
+      allow read: if isAuthenticated() && (
+        resource.data.status == 'Published' ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow create: if isTrainer() || isCoordinator();
+      allow update, delete: if isCoordinator() || (isTrainer() && resource.data.trainerId == request.auth.uid);
+
+      // Protected Questions Subcollection
+      match /questions/{questionId} {
+        // Correct options only visible to Trainers/Coordinators.
+        // Students retrieve questions without answers via sanitized backend endpoints.
+        allow read, write: if isTrainer() || isCoordinator();
+      }
+    }
+
+    // Questions top-level collection (restricted to trainers & coordinators)
+    match /questions/{questionId} {
+      allow read, write: if isTrainer() || isCoordinator();
+    }
+
+    // =========================================================
+    // 4. Assessment Assignments
+    // =========================================================
+    match /assessmentAssignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isTrainer() || isCoordinator();
+    }
+
+    // =========================================================
+    // 5. Assessment Attempts & Answers
+    // =========================================================
+    match /assessmentAttempts/{attemptId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+
+      match /answers/{questionId} {
+        allow read, write: if isAuthenticated() && (
+          get(/databases/$(database)/documents/assessmentAttempts/$(attemptId)).data.studentId == request.auth.uid ||
+          isTrainer() ||
+          isCoordinator()
+        );
+      }
+    }
+
+    match /assessmentAnswers/{answerId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow write: if isAuthenticated() && (
+        request.resource.data.studentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+    }
+
+    // =========================================================
+    // 6. Tasks Collection
+    // =========================================================
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        resource.data.studentId == null ||
+        resource.data.studentId == 'all' ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow create: if isTrainer() || isCoordinator();
+      allow update, delete: if isCoordinator() || (isTrainer() && resource.data.trainerId == request.auth.uid);
+    }
+
+    // =========================================================
+    // 7. Study Materials
+    // =========================================================
+    match /studyMaterials/{materialId} {
+      allow read: if isAuthenticated() && (
+        resource.data.targetStudentId == null ||
+        resource.data.targetStudentId == 'all' ||
+        resource.data.targetStudentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow create: if isTrainer() || isCoordinator();
+      allow update, delete: if isCoordinator() || (isTrainer() && resource.data.uploadedBy.id == request.auth.uid);
+    }
+
+    // =========================================================
+    // 8. Companies & Placement Drives
+    // =========================================================
+    match /companies/{companyId} {
+      allow read: if isAuthenticated();
+      allow write: if isCoordinator();
+    }
+
+    match /placementDrives/{driveId} {
+      allow read: if isAuthenticated();
+      allow write: if isCoordinator();
+    }
+
+    // =========================================================
+    // 9. Drive Applications
+    // =========================================================
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isCoordinator() ||
+        isTrainer()
+      );
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isCoordinator();
+      allow delete: if (resource.data.studentId == request.auth.uid && resource.data.status == 'Applied') || isCoordinator();
+    }
+
+    // =========================================================
+    // 10. Placement Offers
+    // =========================================================
+    match /placementOffers/{offerId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isCoordinator() ||
+        isTrainer()
+      );
+      allow write: if isCoordinator();
+    }
+
+    // =========================================================
+    // 11. Self-paced Quizzes & AI Predictions
+    // =========================================================
+    match /quizAttempts/{quizId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+    }
+
+    match /aiPredictions/{predictionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow write: if isTrainer() || isCoordinator();
+    }
+
+    // =========================================================
+    // 12. Code Submissions
+    // =========================================================
+    match /codeSubmissions/{submissionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+    }
+
+    // =========================================================
+    // 13. AI Quizzes & Attempts
+    // =========================================================
+    match /aiQuizzes/{quizId} {
+      // Questions without answers are fetched via backend API endpoints
+      allow read: if isAuthenticated();
+      allow write: if isTrainer() || isCoordinator();
+    }
+
+    match /aiQuizAttempts/{attemptId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        isTrainer() ||
+        isCoordinator()
+      );
+      allow create: if isAuthenticated() && request.resource.data.studentId == request.auth.uid;
+    }
+  }
+}

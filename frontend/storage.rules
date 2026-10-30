@@ -1,0 +1,34 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
+
+    function isTrainer() {
+      return hasRole('TRAINER');
+    }
+
+    function isCoordinator() {
+      return hasRole('PLACEMENT_COORDINATOR');
+    }
+
+    // Study Materials storage path: study-materials/{trainerId}/{fileName}
+    match /study-materials/{trainerId}/{fileName} {
+      // Authenticated users (Students, Trainers, Coordinators) can read/download
+      allow read: if isAuthenticated();
+
+      // Only Trainers (for their own folder) or Coordinators can upload/delete
+      allow write: if isAuthenticated() && (
+        (isTrainer() && (request.auth.uid == trainerId || trainerId == 'trainer_general')) ||
+        isCoordinator()
+      );
+    }
+  }
+}
